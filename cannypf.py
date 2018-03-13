@@ -35,6 +35,55 @@ class CannyPF(object):
         meaningful_length = int(2.0 * np.log(num_row * num_col) / np.log(8) + 0.5)
         angle = 2 * np.arctan(2 / meaningful_length)
         smth_img = cv2.GaussianBlur(self.gray_img, self.gauss_size, 1.0)
+        # compute gradient map and orientation map
+        gradient_map = np.zeros((num_row, num_col))
+        dx = cv2.Sobel(smth_img,cv2.CV_64F,1,0,ksize=3)
+        dy = cv2.Sobel(smth_img,cv2.CV_64F,0,1,ksize=3)
+
+        # construct a histogram
+        gray_levels = 255
+        total_num = 0
+        grad_low = 1.3333
+        hist = np.zeros((8*gray_levels,))
+        for ind_r in range(num_row):
+            for ind_c in range(num_col):
+                grd = np.abs(dx[ind_r, ind_c]) + np.abs(dy[ind_r, ind_c])
+                if grd > grad_low:
+                    hist[int(grd + 0.5)] += 1
+                    total_num += 1
+                    gradient_map[ind_r, ind_c] = grd
+                else:
+                    gradient_map[ind_r, ind_c] = 0
+        # gradient statistic
+        num_p = np.sum(hist * (hist-1))
+        #
+        p_max = 1.0 / np.exp(np.log(num_p)/meaningful_length)
+        p_min = 1.0 / np.exp(np.log(num_p)/np.sqrt(num_row * num_col))
+        prob = np.cumsum(hist) / total_num
+        # compute two threshold
+        high_threshold = 0
+        low_threshold = 1.3333
+        hist_length = hist.shape[0]
+
+        for i in range(hist_length):
+            p_cur = prob[-i-1]
+            if p_cur > p_max:
+                high_threshold = hist_length - i - 1
+                break
+        for i in range(hist_length):
+            p_cur = prob[-i-1]
+            if p_cur > p_min:
+                low_threshold = hist_length - i - 1
+                break
+        if low_threshold < 1.3333:
+            low_threshold = 1.3333
+        # visual meaningful high threshold
+        high_threshold = np.sqrt(high_threshold * self.vm_grad)
+        return cv2.Canny(smth_img, low_threshold, high_threshold, apertureSize=3)
+
+
+
+
 
 
 
