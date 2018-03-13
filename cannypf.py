@@ -34,7 +34,8 @@ class CannyPF(object):
         # compute meaningful length
         meaningful_length = int(2.0 * np.log(num_row * num_col) / np.log(8) + 0.5)
         angle = 2 * np.arctan(2 / meaningful_length)
-        smth_img = cv2.GaussianBlur(self.gray_img, self.gauss_size, 1.0)
+        smth_img = cv2.GaussianBlur(self.gray_img, (self.gauss_size, self.gauss_size), 1.0)
+        self.smth_img = smth_img
         # compute gradient map and orientation map
         gradient_map = np.zeros((num_row, num_col))
         dx = cv2.Sobel(smth_img,cv2.CV_64F,1,0,ksize=3)
@@ -79,18 +80,12 @@ class CannyPF(object):
             low_threshold = 1.3333
         # visual meaningful high threshold
         high_threshold = np.sqrt(high_threshold * self.vm_grad)
-        return cv2.Canny(smth_img, low_threshold, high_threshold, apertureSize=3)
-
-
-
-
-
-
-
+        print(low_threshold, high_threshold)
+        return low_threshold, high_threshold
     def comp_edge_map(self):
         """
         a wrapper for canny detector in OpenCV
         :return: numpy array
         """
         low, high = self.comp_threshold()
-        return cv2.Canny(self.img, low, high)
+        return cv2.Canny(self.smth_img, low, high, apertureSize=3)
