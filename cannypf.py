@@ -101,3 +101,45 @@ class CannyPF(object):
         """
         low, high = self.comp_threshold()
         return cv2.Canny(self.smth_img, low, high, apertureSize=3)
+
+
+
+
+def comp_edge_chain(image, edge_map):
+    """
+    this function compute list of line, based on edge map
+    ------
+    Input: image, image, numpy array.
+           edge_map, 2d numpy array, computed by CannyPF
+    Output: list of points
+    """
+    dim_len = len(image.shape)
+   
+    if dim_len == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    elif dim_len == 2:
+        pass
+    else:
+        raise ValueError("number of channels in image is not right")
+    
+    num_row, num_col = image.shape
+
+     # compute gradient
+   
+    orient_map = np.zeros((num_row, num_row))
+    mask = np.zeros((num_row, num_col))
+
+    dx = cv2.Sobel(image, cv2.CV_64F,1,0,ksize=3,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
+    dy = cv2.Sobel(image, cv2.CV_64F,0,1,ksize=3,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
+
+    angleper = np.pi / 8.0
+    grad_map = np.abs(dx) + np.abs(dy)
+    
+    orient_map = (np.arctan2(dx, -dy) + np.pi) / angleper 
+    orient_map[np.abs(orient_map - 16) < 1e-8] = 0 # 2pi case
+     
+        
+
+
+
+     
