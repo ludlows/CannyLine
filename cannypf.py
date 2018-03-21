@@ -124,11 +124,7 @@ def comp_edge_chain(image, edge_map):
     
     num_row, num_col = image.shape
 
-     # compute gradient
-   
-    orient_map = np.zeros((num_row, num_row))
-    mask = np.zeros((num_row, num_col))
-
+    # compute gradient
     dx = cv2.Sobel(image, cv2.CV_64F,1,0,ksize=3,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
     dy = cv2.Sobel(image, cv2.CV_64F,0,1,ksize=3,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
 
@@ -137,8 +133,19 @@ def comp_edge_chain(image, edge_map):
     
     orient_map = (np.arctan2(dx, -dy) + np.pi) / angleper 
     orient_map[np.abs(orient_map - 16) < 1e-8] = 0 # 2pi case
-     
-        
+    
+    # compute edge chains
+    rows, cols = np.where(edge_map > 1e-8)
+    # col, row
+    gradient_points = [(c,r) for r,c in zip(rows, cols)]
+    gradient_values = grad_map[(rows, cols)]
+    
+    mask = (edge_map > 1e-8).astype('int')
+
+    order = np.argsort(gradient_values)
+    
+    gradient_points = [gradient_points[i] for i in reversed(order)]
+    gradient_values = [gradient_values[i] for i in reversed(order)]   
 
 
 
