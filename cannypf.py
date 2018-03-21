@@ -147,6 +147,56 @@ def comp_edge_chain(image, edge_map):
     gradient_points = [gradient_points[i] for i in reversed(order)]
     gradient_values = [gradient_values[i] for i in reversed(order)]   
 
+    def has_next(x_seed, y_seed):
+        """
+        this function return boolean result.
+        Check whether there is a next value
+        Input: x_seed, int, col
+               y_seed, int, row
+        Output: (boolean, (col, row)
+        """
+        num_row, num_col = mask.shape
+        direction = orient_map[y_seed, x_seed]
+        direction0 = direction - 1;
+        if direction0 < 0:
+            direction0 = 15
+        direction1 = direction
+        direction2 = direction + 1
+        if np.abs(direction2 -16) < 1e-8:
+            direction2 = 0
+        
+        x_offset = [0, 1, 0, -1, 1, -1, -1, 1]
+        y_offset = [1, 0, -1, 0, 1, 1, -1, -1]
+        directions = np.array([direction0, direction1, direction2], dtype=np.float32)
+        for i in range(8):
+            x = x_seed + x_offset[i]
+            y = y_seed + y_offset[i]
+            if (x >= 0 and x < num_col) and (y >= 0 and y < num_row):
+                if mask[y, x] > 0 :
+                    temp_direction = orient_map[y, x]
+                    if any(np.abs(directions - temp_direction) < 1e-8 ):
+                        return (True, (x, y)) # (boolean, (col, row)) 
+        return (False, (None, None))
+    # to find strings 
+    meaningful_length = int(2.0 * np.log(num_row*num_col)/ np.log(8.0) + 0.5)
+    # edge_chain , the [[(c,r),..... ,(c,r)], [(c,r),...(c,r)],...] need to be returned
+    edge_chain = []
+    for i in range(len(gradient_points)):
+        x = gradient_points[i][0] # col
+        y = gradient_points[i][1] # row
+        chain = []
+        while True:
+            chain.append((x,y))
+            res, point = has_next(x,y)
+            x,y = point
+            if not res:
+                break
+        if (len(chain) > meaningful_length):
+            edge_chain.append(chain)
+    return edge_chain
 
+
+
+        
 
      
