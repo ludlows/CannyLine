@@ -125,22 +125,25 @@ def comp_edge_chain(image, edge_map):
     num_row, num_col = image.shape
 
     # compute gradient
-    dx = cv2.Sobel(image, cv2.CV_64F,1,0,ksize=3,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
-    dy = cv2.Sobel(image, cv2.CV_64F,0,1,ksize=3,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
+    dx = cv2.Sobel(image, cv2.CV_16S,1,0,ksize=3,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
+    dy = cv2.Sobel(image, cv2.CV_16S,0,1,ksize=3,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
 
     angleper = np.pi / 8.0
     grad_map = np.abs(dx) + np.abs(dy)
     
     orient_map = (np.arctan2(dx, -dy) + np.pi) / angleper 
     orient_map[np.abs(orient_map - 16) < 1e-8] = 0 # 2pi case
-    
+    orient_map = orient_map.astype(np.uint8)
     # compute edge chains
+    edge_map = edge_map.astype(np.uint8)
     rows, cols = np.where(edge_map > 1e-8)
     # col, row
     gradient_points = [(c,r) for r,c in zip(rows, cols)]
     gradient_values = grad_map[(rows, cols)]
     
-    mask = (edge_map > 1e-8).astype('int')
+    
+   
+    mask = (edge_map > 1e-8).astype(np.uint8)
 
     order = np.argsort(gradient_values)
     
@@ -157,7 +160,7 @@ def comp_edge_chain(image, edge_map):
         """
         num_row, num_col = mask.shape
         direction = orient_map[y_seed, x_seed]
-        direction0 = direction - 1;
+        direction0 = direction - 1
         if direction0 < 0:
             direction0 = 15
         direction1 = direction
@@ -181,18 +184,44 @@ def comp_edge_chain(image, edge_map):
     meaningful_length = int(2.0 * np.log(num_row*num_col)/ np.log(8.0) + 0.5)
     # edge_chain , the [[(c,r),..... ,(c,r)], [(c,r),...(c,r)],...] need to be returned
     edge_chain = []
+    print("start computing edge chain")
+    print("num of gradient points: {}".format(len(gradient_values)))
+    maximal_length = int(np.sqrt(num_col**2+num_row**2))
+    # mask is used to reduce infinity loop
     for i in range(len(gradient_points)):
+        print("i = {}".format(i))
         x = gradient_points[i][0] # col
         y = gradient_points[i][1] # row
         chain = []
+        
         while True:
+            # print("i = {}, col = {}, row = {}".format(i, x,y))
             chain.append((x,y))
+            mask[y, x] = 0
             res, point = has_next(x,y)
-            x,y = point
+            newx, newy = point
             if not res:
                 break
+            if len(chain) >= maximal_length:
+                break
+            else:
+                x = newx
+                y = newy
+        # find pixels at the begining of the string
+        x = gradient_points[i][0] # col
+        y = gradient_points[i][1] # row
+        res, point = has_next(x,y)
+        if res:
+            while True:
+                chain.append(point)
+                mask[point[1], point[0]] = 0
+                newres, point = has_next(*point)
+                if not newres:
+                    break
+        
         if (len(chain) > meaningful_length):
             edge_chain.append(chain)
+    print("end")
     return edge_chain
 
 
