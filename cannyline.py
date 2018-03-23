@@ -83,7 +83,7 @@ class MetaLine(object):
         self.dy = cv2.Sobel(self.filtered_img, cv2.CV_16S,0,1,ksize=aperture_size,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
 
         self.grad_map = np.abs(self.dx) + np.abs(self.dy)
-        self.orient_map = np.arctan2(dx, -dy)
+        self.orient_map = np.arctan2(self.dx, -self.dy)
         self.orient_map_int = (self.orient_map + np.pi) / angle_per
         self.orient_map_int[np.abs(self.orient_map_int - 16) < 1e-8] = 0
         self.orient_map_int = self.orient_map_int.astype(np.uint8)
@@ -94,7 +94,7 @@ class MetaLine(object):
         for r_idx in range(self.num_row):
             for c_idx in range(self.num_col):
                 grad = self.grad_map[r_idx, c_idx]
-                if grad > threshold_grad_low:
+                if grad > self.threshold_grad_low:
                     histogram[int(grad+0.5)] += 1
                     total_num += 1
                 else:
@@ -113,7 +113,7 @@ class MetaLine(object):
             if(self.greater_than[i] > p_max):
                 self.threshold_grad_high = i
                 break
-        for i in range(8*gray_level_num-1, -1, 0):
+        for i in range(8*gray_level_num-1, -1, -1):
             if(self.greater_than[i] > p_min):
                 self.threshold_grad_low = i
                 break
