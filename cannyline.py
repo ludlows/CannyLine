@@ -79,7 +79,62 @@ class MetaLine(object):
         else:
             raise ValueError("gauss_sima={} and gauss_half_size={} are forbidden".format(gauss_sigma, gauss_half_size))
         # gradient map
-        self.dx = cv2.Sobel( )
+        self.dx = cv2.Sobel(self.filtered_img, cv2.CV_16S,1,0,ksize=aperture_size,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
+        self.dy = cv2.Sobel(self.filtered_img, cv2.CV_16S,0,1,ksize=aperture_size,scale=1, delta=0, borderType=cv2.BORDER_REPLICATE)
+
+        self.grad_map = np.abs(self.dx) + np.abs(self.dy)
+        self.orient_map = np.arctan2(dx, -dy)
+        self.orient_map_int = (self.orient_map + np.pi) / angle_per
+        self.orient_map_int[np.abs(self.orient_map_int - 16) < 1e-8] = 0
+        self.orient_map_int = self.orient_map_int.astype(np.uint8)
+        
+        # construct histogram
+        histogram = np.zeros(shape=(8*gray_level_num), dtype=np.int32)
+        total_num = 0
+        for r_idx in range(self.num_row):
+            for c_idx in range(self.num_col):
+                grad = self.grad_map[r_idx, c_idx]
+                if grad > threshold_grad_low:
+                    histogram[int(grad+0.5)] += 1
+                    total_num += 1
+                else:
+                    self.grad_map[r_idx,c_idx] = 0
+        # gradient statistic
+        self.n2 = np.sum(histogram * (histogram - 1))
+
+        p_max = 1.0 / np.exp(np.log(self.n2) / self.meaningful_len)
+        p_min = 1.0 / np.exp(np.log(self.n2) / np.sqrt(self.num_col*self.num_row))
+
+        self.greater_than = np.zeros((8*gray_level_num,), dtype=np.float32)
+        self.smaller_than = np.zeros((8*gray_level_num,), dtype=np.float32)
+
+        self.greater_than = np.cumsum(histogram[::-1])[::-1] / total_num
+        for i in range(8*gray_level_num-1, -1, -1):
+            if(self.greater_than[i] > p_max):
+                self.threshold_grad_high = i
+                break
+        for i in range(8*gray_level_num-1, -1, 0):
+            if(self.greater_than[i] > p_min):
+                self.threshold_grad_low = i
+                break
+        if(self.threshold_grad_low < gauss_noise):
+            self.threshold_grad_low = gauss_noise
+        # convert probabilistic meaningful to visual meaningful
+        self.threshold_grad_high = np.sqrt(self.threshold_grad_high * self.visual_meaning_grad)
+
+        # compute canny edge
+        self.canny_edge = cv2.Canny(self.filtered_img, self.threshold_grad_low, self.threshold_grad_high, aperture_size) 
+
+        # construct mask
+        grad_rows, grad_cols = np.where(self.canny_edge > 0)
+        self.mask = (self.canny_edge > 0).astype(np.uint8)
+
+        self.grad_points = [(c,r)for r,c in zip(grad_rows, grad_cols)]
+        self.grad_values = self.grad_map[grad_rows, grad_cols]
+        # end get information, this part can also be called CannyPF
+
+
+
 
     def mtline_detect(self, origin_img, gauss_sigma, gauss_half_size):
         """
