@@ -135,6 +135,25 @@ class MetaLine(object):
 
 
 
+    def smart_routing(self, min_deviation, min_size):
+        """
+        return a list of cluster
+        """
+        if min_size < 3:
+            min_size = 3
+        
+        mask_img_origin = np.copy(self.mask)
+        ori_map_ind = self.orient_map_int
+
+        # sort descent
+        descent_idx = np.argmax(self.grad_values)
+        self.grad_values = self.grad_values[descent_idx]
+        self.grad_points = [self.grad_points[i] for i in descent_idx]
+        # find all pixels in meaningful line
+
+
+        # find segments. segments = [ [(col1,row1), (col2,row2), ..], [(col1,row1),..],..] 
+        
 
     def mtline_detect(self, origin_img, gauss_sigma, gauss_half_size):
         """
@@ -147,3 +166,11 @@ class MetaLine(object):
             lines: [[f1,f2],[],[],...,[]]
                
         """
+        self.getInfo(origin_img, gauss_sigma, gauss_half_size, self.p)
+
+        # smart routing
+        min_deviation = 2.0;
+        min_size = self.meaningful_len / 2
+        cluster_list = self.smart_routing(min_deviation, min_size)
+
+
