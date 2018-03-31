@@ -216,7 +216,59 @@ class MetaLine(object):
                 edge_chain.append(chain)
        
         # find segments. segments = [ [(col1,row1), (col2,row2), ..], [(col1,row1),..],..] 
-        return edge_chain
+        # find segment for each edge in edge_map
+        print("length of strings = {}".format(len(edge_chain)))
+        segments = []
+        for i in range(len(edge_chain)):
+            self.sub_division(segments, edge_chain[i],0, len(edge_chain[i])-1, min_deviation, min_size)
+        
+        return segments
+
+    
+    def sub_division(self,segments, edge, first_idx, last_idx, min_deviation, min_size):
+        """
+        input:
+            
+            edge, [(col1,row1), (col2,row2), ..]
+            min_deviation:
+            min_size:
+        
+        output: segment, it is chanaged inside the function
+        """
+        first_x = edge[first_idx][0] # col
+        first_y = edge[first_idx][1] # row
+
+        last_x = edge[last_idx][0] # col
+        last_y = edge[last_idx][0] # row
+
+        length = np.sqrt(
+            np.square(first_x-last_x) + np.square(last_y - first_y))
+        
+        # find maximum deviation from line segment
+        coord = np.array(edge, dtype=np.float32)
+        coord -= np.array([first_x, first_y])
+        dev = np.abs(coord[:,0] * (first_y - last_y) + coord[:,1] * (last_x - first_x))
+        # note the deviation calculation
+        max_dev_index = np.argmax(dev)
+        max_dev = dev[max_dev_index]
+
+        max_dev /= length
+
+        # compute the ratio between the length of the segment an the max deviation
+        # test the number of pixels of the sub clusters
+
+        half_min_size = min_size / 2
+        if all([
+            max_dev >= min_deviation,
+            max_dev_index - first_idx + 1 >= half_min_size,
+            last_idx - max_dev_index + 1 >= half_min_size]):
+
+            self.sub_division(segments, edge, first_idx, max_dev_index, min_deviation, min_size)
+            self.sub_division(segments, edge, max_dev_index, last_idx, min_deviation, min_size)
+        else:
+            segments.append([edge[i] for i in range(first_idx, last_idx+1)])
+
+
 
     def mtline_detect(self, origin_img, gauss_sigma, gauss_half_size):
         """
@@ -234,15 +286,18 @@ class MetaLine(object):
         # smart routing
         min_deviation = 2.0
         min_size = self.meaningful_len / 2
-        edge_chain = self.smart_routing(min_deviation, min_size)
-
-        # test
-        result_img = np.zeros((origin_img.shape),dtype=np.uint8)
-        for chain in edge_chain:
-            for col,row in chain:
-                result_img[row, col] = 255
+        segments = self.smart_routing(min_deviation, min_size)
+        
+        # TODO the number of segments is different
+        print("length of segments = {}".format(len(segments)))
         print("done")
-        print('length edge_chain = {}'.format(len(edge_chain)))
-        cv2.imwrite("./img/testedgemap.jpg", result_img)
+        # test
+        # result_img = np.zeros((origin_img.shape),dtype=np.uint8)
+        # for chain in edge_chain:
+        #     for col,row in chain:
+        #         result_img[row, col] = 255
+        # print("done")
+        # print('length edge_chain = {}'.format(len(edge_chain)))
+        # cv2.imwrite("./img/testedgemap.jpg", result_img)
 
 
