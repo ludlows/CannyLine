@@ -24,8 +24,9 @@ def main():
     #         result_img[row, col] = 255
     # cv2.imwrite("C:\\Users\\Administrator\\Downloads\\CannyPFpy.jpg", result_img)
     mtline = MetaLine()
-    mtline.getInfo(img,1,1,0.125)
-    cv2.imwrite(r"./img/cannypf.jpg", mtline.canny_edge)
+    mtline.mtline_detect(img, 1,1)
+    # mtline.getInfo(img,1,1,0.125)
+    # cv2.imwrite(r"./img/cannypf.jpg", mtline.canny_edge)
 
 if __name__  == "__main__":
     main()

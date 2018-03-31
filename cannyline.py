@@ -186,13 +186,37 @@ class MetaLine(object):
 
         edge_chain = [] # [[(x1,y1), (x2,y2),...],[(x1,y1),(x2,y2)],...]
         # mask is used to reduce infinity loop
-        
+
         for i in range(len(self.grad_points)):
+            x = self.grad_points[i][0] # col
+            y = self.grad_points[i][1] # row
+            chain = []
 
-
+            while True:
+                chain.append((x,y))
+                mask[y,x] = 0
+                res, point = has_next(x,y)
+                newx, newy = point
+                if not res:
+                    break
+                x = newx
+                y = newy
+            # find pixels at the beginning of the edge
+            x = self.grad_points[i][0] # col
+            y = self.grad_points[i][1] # row
+            res, point = has_next(x,y)
+            if res:
+                while True:
+                    chain.append(point)
+                    mask[point[1], point[0]] = 0
+                    newres, point = has_next(*point)
+                    if not newres:
+                        break
+            if len(chain) > self.meaningful_len:
+                edge_chain.append(chain)
        
         # find segments. segments = [ [(col1,row1), (col2,row2), ..], [(col1,row1),..],..] 
-        
+        return edge_chain
 
     def mtline_detect(self, origin_img, gauss_sigma, gauss_half_size):
         """
@@ -208,8 +232,17 @@ class MetaLine(object):
         self.getInfo(origin_img, gauss_sigma, gauss_half_size, self.p)
 
         # smart routing
-        min_deviation = 2.0;
+        min_deviation = 2.0
         min_size = self.meaningful_len / 2
-        cluster_list = self.smart_routing(min_deviation, min_size)
+        edge_chain = self.smart_routing(min_deviation, min_size)
+
+        # test
+        result_img = np.zeros((origin_img.shape),dtype=np.uint8)
+        for chain in edge_chain:
+            for col,row in chain:
+                result_img[row, col] = 255
+        print("done")
+        print('length edge_chain = {}'.format(len(edge_chain)))
+        cv2.imwrite("./img/testedgemap.jpg", result_img)
 
 
