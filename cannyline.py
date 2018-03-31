@@ -143,15 +143,54 @@ class MetaLine(object):
             min_size = 3
         
         mask_img_origin = np.copy(self.mask)
-        ori_map_ind = self.orient_map_int
+        ori_map_int = self.orient_map_int
 
         # sort descent
-        descent_idx = np.argmax(self.grad_values)
+        descent_idx = np.argsort(-self.grad_values) # sort descent
         self.grad_values = self.grad_values[descent_idx]
         self.grad_points = [self.grad_points[i] for i in descent_idx]
         # find all pixels in meaningful line
+        mask = mask_img_origin # just change its value
+        orient_map = ori_map_int # values in this matrix will not be changed
+        def has_next(x_seed, y_seed):
+            """
+            this function return boolean result.
+            Check whether there is a next value
+            Input: x_seed, int, col
+                   y_seed, int, row
+            Output: (boolean, (col, row)
+            """
+            num_row, num_col = mask.shape
+            direction = orient_map[y_seed, x_seed]
+            direction0 = direction - 1
+            if direction0 < 0:
+                direction0 = 15
+            direction1 = direction
+            direction2 = direction + 1
+            if np.abs(direction2 -16) < 1e-8:
+                direction2 = 0
+        
+            x_offset = [0, 1, 0, -1, 1, -1, -1, 1]
+            y_offset = [1, 0, -1, 0, 1, 1, -1, -1]
+            directions = np.array([direction0, direction1, direction2], dtype=np.float32)
+            for i in range(8):
+                x = x_seed + x_offset[i]
+                y = y_seed + y_offset[i]
+                if (x >= 0 and x < num_col) and (y >= 0 and y < num_row):
+                    if mask[y, x] > 0 :
+                        temp_direction = orient_map[y, x]
+                        if any(np.abs(directions - temp_direction) < 1e-8 ):
+                            return (True, (x, y)) # (boolean, (col, row)) 
+            return (False, (None, None))
+        
+
+        edge_chain = [] # [[(x1,y1), (x2,y2),...],[(x1,y1),(x2,y2)],...]
+        # mask is used to reduce infinity loop
+        
+        for i in range(len(self.grad_points)):
 
 
+       
         # find segments. segments = [ [(col1,row1), (col2,row2), ..], [(col1,row1),..],..] 
         
 
