@@ -268,6 +268,107 @@ class MetaLine(object):
         else:
             segments.append([edge[i] for i in range(first_idx, last_idx+1)])
 
+    def least_square_fit(self, edge, sigma):
+        """
+        least square fitting, edge: [(c1, r1), (c2,r2), ...]
+        return 4 parameters and updated edge
+        """
+        if edge[0][0] == edge[-1][0]:
+            slope = float('inf')
+        else:
+            slope = (edge[-1][1]-edge[0][1]) / (edge[-1][0] - edge[0][0])
+        coord = np.array(edge, dtype=np.float32)
+        if np.abs(slope) < 1:
+            sumxy = np.sum(coord, axis=0)
+            sum_x = sumxy[0]
+            sum_y = sumxy[1]
+            sum_x2 = np.sum(np.square(coord[:,0]))
+            sum_xy = np.sum(coord[:,0] * coord[:,1])
+            n = len(edge)
+            b = (sum_x2 * sum_y - sum_x * sum_xy) / (n*sum_x2-sum_x*sum_x)
+            k = (n*sum_xy - sum_x*sum_y) / (n*sum_x2 - sum_x*sum_x)
+            offsets = coord[:,1] - k*coord[:,0] - b
+            dev = np.sum(np.square(offsets))
+           
+            # compute start and end
+            start = 0
+            end = n-1
+            idx = 0
+            dev_outliers = 0
+            for i in range(n):
+                if offsets[i] < 1.0:
+                    idx += 1
+                if idx == 2:
+                    start = i
+                    break
+                else:
+                    dev_outliers += np.square(offsets[i])
+                
+            idx = 0
+            for i in range(n-1, -1, -1):
+                if offsets[i] < 1.0:
+                    idx += 1
+                if idx == 2:
+                    end = i
+                    break
+                else:
+                    dev_outliers += np.square(offsets[i])
+            if end <= start:
+                return [], (None, None, None, None)
+            dev = np.sqrt((dev-dev_outliers) / (n-2) )
+            updated_edge = [edge[i] for i in range(start, end+1)]
+            return updated_edge, (0, k, b, dev)
+        else:
+            sumxy = np.sum(coord, axis=0)
+            sum_x = sumxy[0]
+            sum_y = sumxy[1]
+            sum_y2 = np.sum(np.square(coord[:,1]))
+            sum_xy = np.sum(coord[:,0] * coord[:,1])
+            n = len(edge)
+            b = (sum_y2 * sum_x - sum_y * sum_xy)/ (n*sum_y2 - sum_y*sum_y)
+            k = (n*sum_xy - sum_x * sum_y) / (n*sum_y2 - sum_y*sum_y)
+            offsets = coord[:,1] - k*coord[:,0] - b
+            dev = np.sum(np.square(offsets))
+
+            start = 0
+            end = n-1
+            idx = 0
+            dev_outliers = 0
+            for i in range(n):
+                if offsets[i] < 1.0:
+                    idx += 1
+                if idx == i:
+                    start = i
+                    break
+                else:
+                    dev_outliers += np.square(offsets[i])
+            idx = 0
+            for i in range(n-1, -1, -1):
+                if offsets[i] < 1.0:
+                    idx += 1
+                if idx == 2:
+                    end = i
+                    break
+                else:
+                    dev_outliers += np.square(offsets[i])
+            if end <= start: 
+                return [], (None, None, None, None)
+            
+            dev = np.sqrt((dev-dev_outliers) / (n-2))
+            updated_edge = [edge[i] for i in range(start, end+1)]
+            return updated_edge, (1, k, b, dev)
+        
+    def get_metalines(self, segments, sigma):
+        """
+        return meta lines
+        """
+        mask = self.mask
+        newsegments = []
+        for edge in segments:
+            res_edge, para = self.least_square_fit(edge, sigma)
+            if res_edge:
+                newsegments.append(res_edge)
+
 
 
     def mtline_detect(self, origin_img, gauss_sigma, gauss_half_size):
@@ -288,9 +389,14 @@ class MetaLine(object):
         min_size = self.meaningful_len / 2
         segments = self.smart_routing(min_deviation, min_size)
         
-        # TODO the number of segments is different
+        # TODO the number of segments is different but close
         print("length of segments = {}".format(len(segments)))
         print("done")
+
+        # get initial metaline
+        
+        metalines = self.get_metalines(segments, self.sigma)
+
         # test
         # result_img = np.zeros((origin_img.shape),dtype=np.uint8)
         # for chain in edge_chain:
