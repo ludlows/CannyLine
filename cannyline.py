@@ -366,7 +366,7 @@ class MetaLine(object):
     def get_metalines(self, segments, sigma):
         """
         return meta lines
-         metalines[(id_num, direction, k, b,(start_x, start_y), (end_x, end_y)), (...),...]
+         metalines[(id_num, direction, k, b, start_x, start_y, end_x, end_y), (...),...]
          newsegments, locations in newsegments is corresponfing to metalines with same index
         upate mask, update segments,
         """
@@ -398,6 +398,78 @@ class MetaLine(object):
                 lines.append((id_num, direction, k, b, start_x, start_y, end_x, end_y))
         assert(len(newsegments) == len(lines))
         return newsegments, lines
+    
+    def merge_lines(self, id_num, line_idx, line_hyp, threshold_angle):
+        """
+        id_num, in self.metaline[(id_num, direction, k, b, start_x, start_y, end_x, end_y), (...),...]
+        line_hyp: a list of index of metalines
+        threshold_angle: float
+        line_idx: can be used to access current segment by self.segments[line_idx], 
+                                        current metaline by self.metalines[line_idx]
+        """
+        new_id_num, direction, k, b, start_x, start_y, end_x, end_y = self.metalines[line_idx]
+        assert(new_id_num == id_num)
+        
+        if start_x == end_x:
+            current_angle = np.pi / 2
+        else:
+            current_angle = np.arctan((start_y - end_y) / (start_x - end_x)) 
+        
+        # metaline merge judge
+        
+        angles = []
+        for v in line_hyp:
+            new_id_num, direction, k, b, start_x, start_y, end_x, end_y = self.metalines[v]
+            if start_x == end_x:
+                angles.append(np.pi/2)
+            else:
+                angles.append(np.arctan((start_y - end_y) / (start_x - end_x)) )
+        
+        # set angle min
+        # get line index with min angle
+        angle_min = 100
+        min_line_idx = 0
+        for angle, idx in zip(angles, line_hyp):
+            offset = min(np.abs(current_angle - angle), np.pi - np.abs(current_angle - angle))
+            if offset < angle_min:
+                angle_min = offset
+                min_line_idx = idx
+        # failed 
+        if angle_min > threshold_angle:
+            return False 
+        # merge
+        threshold_dist = 4
+        num_hyp = len(self.segments[min_line_idx])
+        k = np.abs(np.tan(current_angle))
+        if k > 1
+
+
+    def extend_hori_line(self):
+        """
+        extend horizontal line
+        """
+        pass
+
+
+    def extend_lines(self, segments, lines, removal):
+        """
+        lines: [(id_num, direction, k, b, start_x, start_y, end_x, end_y), (...),...]
+        segments: [[(col1,row1)...], [(col1,row1),...],...]
+        removal: [0,...]
+        """
+        long_line_idx = [(len(segments[i]), i) for i in range(len(segments)) if len(segments[i]) > 2 * self.meaningful_len]
+        long_line_idx.sort(reverse=True)
+        for _, idx in long_line_idx:
+            if not removal[idx]:
+                direction = lines[idx][1]
+                if direction == 0: #  horizontal line
+                    self.extend_hori_line()
+
+                elif  direction == 1: # vertical line
+                    pass
+                    
+                else:
+                    raise ValueError("the direction sign can not be {}".format(direction))
 
 
 
@@ -420,7 +492,7 @@ class MetaLine(object):
         min_size = self.meaningful_len / 2
         segments = self.smart_routing(min_deviation, min_size)
         
-        # TODO the number of segments is different but close
+        #  the number of segments is different but close
         print("length of segments = {}".format(len(segments)))
         print("done")
 
@@ -430,8 +502,15 @@ class MetaLine(object):
 
         print("length of segments = {}".format(len(segments)))
         print("length of metalines = {}".format(len(metalines)))
+        print("min of self.mask = {}, should be a negative".format(np.min(self.mask)))
+        # //meta line extending
+        remove = [0 for _ in range(len(segments))] # sign
 
-        # TODO
+        self.segments = segments
+        self.metalines = metalines 
+
+
+
 
         # test
         # result_img = np.zeros((origin_img.shape),dtype=np.uint8)
