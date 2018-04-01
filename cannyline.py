@@ -315,7 +315,9 @@ class MetaLine(object):
                     dev_outliers += np.square(offsets[i])
             if end <= start:
                 return [], (None, None, None, None)
-            dev = np.sqrt((dev-dev_outliers) / (n-2) )
+            # print("n={}".format(n))
+            dev = np.sqrt(np.abs(dev-dev_outliers) / (n-2) )
+            # print(dev)
             updated_edge = [edge[i] for i in range(start, end+1)]
             return updated_edge, (0, k, b, dev)
         else:
@@ -354,20 +356,49 @@ class MetaLine(object):
             if end <= start: 
                 return [], (None, None, None, None)
             
-            dev = np.sqrt((dev-dev_outliers) / (n-2))
+            dev = np.sqrt(np.abs(dev-dev_outliers) / (n-2))
+            # print("n={}".format(n))
+
             updated_edge = [edge[i] for i in range(start, end+1)]
             return updated_edge, (1, k, b, dev)
-        
+
+
     def get_metalines(self, segments, sigma):
         """
         return meta lines
+         metalines[(id_num, direction, k, b,(start_x, start_y), (end_x, end_y)), (...),...]
+         newsegments, locations in newsegments is corresponfing to metalines with same index
+        upate mask, update segments,
         """
-        mask = self.mask
+       
         newsegments = []
+        lines = []
+        count = 0
         for edge in segments:
             res_edge, para = self.least_square_fit(edge, sigma)
             if res_edge:
+                count += 1
                 newsegments.append(res_edge)
+                for x, y in res_edge:
+                    self.mask[y,x] = -count
+                id_num = count
+                direction, k, b, _ = para
+                # direction :0 for k<1, 1 for k >=1
+                if direction == 0:
+                    start_x = res_edge[0][0]
+                    start_y = k * start_x + b 
+                    end_x = res_edge[-1][0]
+                    end_y = k * end_x + b
+                else: # direction == 1
+                    start_y = res_edge[0][1]
+                    start_x = k * start_y+ b
+                    end_y = res_edge[-1][1]
+                    end_x = k * end_y + b
+                
+                lines.append((id_num, direction, k, b, start_x, start_y, end_x, end_y))
+        assert(len(newsegments) == len(lines))
+        return newsegments, lines
+
 
 
 
@@ -395,7 +426,12 @@ class MetaLine(object):
 
         # get initial metaline
         
-        metalines = self.get_metalines(segments, self.sigma)
+        segments, metalines = self.get_metalines(segments, self.sigma)
+
+        print("length of segments = {}".format(len(segments)))
+        print("length of metalines = {}".format(len(metalines)))
+
+        # TODO
 
         # test
         # result_img = np.zeros((origin_img.shape),dtype=np.uint8)
