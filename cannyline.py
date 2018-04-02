@@ -764,22 +764,43 @@ class MetaLine(object):
                             
 
 
-    def extend_lines(self, segments, lines, removal):
+    def grad_weight_LSF(self, points, sigma):
+        """
+        gradient weighted Least Square Fitting
+        """
+        pass 
+
+    def extend_lines(self,removal):
         """
         lines: [(id_num, direction, k, b, start_x, start_y, end_x, end_y), (...),...]
         segments: [[(col1,row1)...], [(col1,row1),...],...]
         removal: [0,...]
         """
-        long_line_idx = [(len(segments[i]), i) for i in range(len(segments)) if len(segments[i]) > 2 * self.meaningful_len]
+        long_line_idx = [(len(self.segments[i]), i) for i in range(len(self.segments)) if len(self.segments[i]) > 2 * self.meaningful_len]
         long_line_idx.sort(reverse=True)
         for _, idx in long_line_idx:
             if not removal[idx]:
-                direction = lines[idx][1]
+                direction = self.metalines[idx][1]
                 if direction == 0: #  horizontal line
-                    self.extend_hori_line()
-
+                    self.extend_hori_line(idx, removal)
+                    # reverse self.segments[idx]
+                    self.segments[idx].reverse()
+                    if self.metalines[idx][1] == 0: # direction ==0
+                        self.extend_hori_line(idx, removal)
+                    elif self.metalines[idx][1] == 1:
+                        self.extend_verti_line(idx, removal)
+                    else:
+                        raise ValueError(" direction is wrong")
                 elif  direction == 1: # vertical line
-                    pass
+                    self.extend_verti_line(idx, removal)
+                    # reverse
+                    self.segments[idx].reverse()
+                    if self.segments[idx][1] == 0:
+                        self.extend_hori_line(idx, removal)
+                    elif self.segments[idx][1] == 1:
+                        self.extend_verti_line(idx, removal)
+                    else:
+                        raise ValueError("directoin is wrong")
                     
                 else:
                     raise ValueError("the direction sign can not be {}".format(direction))
