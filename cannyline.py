@@ -768,7 +768,47 @@ class MetaLine(object):
         """
         gradient weighted Least Square Fitting
         """
-        pass 
+        n = len(points)
+        start_x, start_y = points[0]
+        end_x, end_y = points[-1]
+        if start_x == end_x:
+            slope = float('inf')
+        else:
+            slope = ((start_y - end_y) / (start_x - end_x))
+        weight = np.array([self.grad_map[y,x] for x,y in points], dtype=np.float32)
+        weight_sum = np.sum(weight)
+        weight = weight / weight_sum
+        
+        coord = np.array(points, dtype=np.float32)
+
+        sum_x = np.sum(coord[:,0] * weight)
+        sum_y = np.sum(coord[:,1] * weight)
+        sum_xy = np.sum(coord[:,0] * coord[:,1] * weight)
+
+        if np.abs(slope) < 1:
+            sum_x2 = np.sum(np.square(coord[:,0]) * weight)
+            b = (sum_x2 * sum_y - sum_x * sum_xy) / (sum_x2 - sum_x * sum_x)
+            k = (sum_xy - sum_x * sum_y ) / (sum_x2 - sum_x * sum_x)
+            offset = coord[:,1] - k * coord[:,0] - b 
+            dev = np.sqrt(np.sum(np.square(offset)) / (n-2))
+            if dev < sigma:
+                return True, (0, k,b,dev)
+            else:
+                return False, (0,k,b,dev)
+        else:
+            sum_y2 = np.sum(np.square(coord[:,1]) * weight)
+            b = (sum_y2 * sum_x - sum_y * sum_xy) / (sum_y2 - sum_y * sum_y)
+            k = (sum_xy - sum_x * sum_y) / (sum_y2 - sum_y * sum_y)
+            offset = coord[:,0] - k * coord[:,1] - b
+            dev = np.sqrt(np.sum(np.square(offset))/ (n-2))
+            if dev < sigma:
+                return True, (1, k,b,dev)
+            else:
+                return False, (1,k,b,dev)
+            
+
+       
+        
 
     def extend_lines(self,removal):
         """
