@@ -55,7 +55,7 @@ class MetaLine(object):
         if len(origin_img.shape) == 2:
             self.num_row, self.num_col = origin_img.shape
         else:
-            self.mum_row, self.num_col, *_ = origin_img.shape
+            self.num_row, self.num_col, *_ = origin_img.shape
 
         self.n4 = np.square(self.num_row * self.num_row)
 
@@ -645,12 +645,123 @@ class MetaLine(object):
         """
         extend vertical line
         """
-        
-        
-        
+        id_num, _, k, b, _, start_y, _, end_y = self.metalines[cur_line_idx]
+        assert(cur_line_idx == id_num -1)
+        start_y = self.segments[cur_line_idx][0][1]
+        end_y = self.segments[cur_line_idx][-1][1]
 
-            
+        end_x = k * end_y + b
+        cur_x = end_x
+        cur_y = end_y
 
+        x_initial = int(cur_x + 0.5)
+        y_initial = int(cur_y + 0.5)
+
+        index = (end_y - start_y) / np.abs(end_y - start_y)
+
+        former_points = [v for v in self.segments[cur_line_idx]]
+
+        gap = 0
+        edge = 0
+        edge_total = 0
+
+        extend = False
+        while True:
+            y_initial += index
+            cur_x += index * k
+            x_initial = int(cur_x + 0.5)
+            choose_left = False
+            if x_initial + 0.5 > cur_x:
+                choose_left = True
+            if x_initial > 0 and x_initial < self.num_col - 1 and y_initial > 0 and y_initial < self.num_row -1:
+                m0 = self.mask[y_initial, x_initial]
+                m1 = self.mask[y_initial, x_initial - 1]
+                m2 = self.mask[y_initial, x_initial + 1]
+                hype_line_ids = []
+                if m0 < 0  and m0 != -id_num:
+                    hype_line_ids.append(-m0-1)
+                if m1 < 0 and m1 != -id_num:
+                    hype_line_ids.append(-m1-1)
+                if m2 < 0 and m2 != -id_num:
+                    hype_line_ids.append(-m2-1)
+                if hype_line_ids:
+                    remove_index = self.merge_lines(id_num, id_num-1, hype_line_ids, self.thresh_angle)
+                    if remove_index != -1:
+                        new_segment, para = self.least_square_fit(self.segments[cur_line_idx], self.sigma)
+                        if new_segment:
+                            self.segments[cur_line_idx] = new_segment
+                            direction, k, b, _ = para
+                            if direction == 1:
+                                y_initial = new_segment[-1][1]
+                                cur_x = k * y_initial + b
+                                removal[remove_index] = 1
+                                extend = True
+                            elif direction == 0
+                                # //0 for k<1, 1 for k >=1
+                                new_x_start = new_segment[0][0]
+                                new_y_start = k*new_x_start + b
+                                new_x_end = new_segment[-1][0]
+                                new_y_end = new_x_end * k + b
+                                self.metalines[cur_line_idx] = (id_num, direction, k, b, new_x_start, new_y_start, new_x_end, new_y_end)
+                                self.extend_hori_line(cur_line_idx, removal)
+                            # update mask
+                            for x,y in new_segment:
+                                self.mask[y,x] = -id_num
+                        else:
+                            break
+                    else:
+                        break
+                else:
+                    if any([m0==1, m1==1, m2==1]) and m0+m1+m2 == 1:
+                        if m0==1 and m0>=m1 and m0>=m2:
+                            self.segments[cur_line_idx].append((x_initial, y_initial))
+                            self.mask[y_initial, x_initial] = -id_num
+                        elif m1 == 1 and m1>=m0 and m1>=m2:
+                            self.segments[cur_line_idx].append((x_initial-1, y_initial))
+                            self.mask[y_initial, x_initial-1] = -id_num
+                        elif m2 == 1 and m2>=m0 and m2>=m1:
+                            if choose_left:
+                                gap += 1
+                                continue
+                            self.segments[cur_line_idx].append((x_initial+1, y_initial))
+                            self.mask[y_initial, x_initial+1] = -id_num
+                        edge += 1
+                        edge_total += 1
+                    else:
+                        gap += 1
+                    if edge == 0 or gap / edge >= 0.25 :
+                        break
+                    if gap == 2:
+                        edge = 0
+                        gap = 0
+                    if edge_total >= self.meaningful_len:
+                        _, para = self.least_square_fit(self.segments[cur_line_idx], self.sigma)
+                        _,k,b,_ = para
+                        cur_x = y_initial * k + b
+                        edge_total = 0
+                        gap = 0
+                        extend = True
+                        # TODO former 
+            else:
+                break
+        if extend:
+            _, para = self.least_square_fit(self.segments[cur_line_idx], sef.sigma)
+            direction, k, b, dev = para
+            if direction == 0:
+                new_x_start = self.segments[cur_line_idx][0][0]
+                new_y_start = k * new_x_start + b
+                new_x_end = self.segments[cur_line_idx][-1][0]
+                new_y_end = new_x_end * k + b
+                self.metalines[cur_line_idx] = (id_num, direction, k, b, new_x_start, new_y_start, new_x_end, new_y_end)
+            elif direction == 1:
+                new_y_start = self.segments[cur_line_idx][0][1]
+                new_x_start = k* new_y_start + b
+                new_y_end = self.segments[cur_line_idx][-1][1]
+                new_x_end = k * new_y_end + b
+                self.metalines[cur_line_idx] = (id_num,direction,k,b, new_x_start,new_y_start, new_x_end, new_y_end)
+        else:
+            self.segments[cur_line_idx] = former_segment
+                            
 
 
     def extend_lines(self, segments, lines, removal):
