@@ -412,6 +412,10 @@ class MetaLine(object):
         """
         new_id_num, _, _, _, start_x, start_y, end_x, end_y = self.metalines[line_idx]
         assert(new_id_num == id_num)
+        start_x = self.segments[line_idx][0][0]
+        start_y = self.segments[line_idx][0][1]
+        end_x = self.segments[line_idx][-1][0]
+        end_y = self.segments[line_idx][-1][1]
         
         if start_x == end_x:
             current_angle = np.pi / 2
@@ -423,6 +427,10 @@ class MetaLine(object):
         angles = []
         for v in line_hyp:
             new_id_num, _, _, _, start_x, start_y, end_x, end_y = self.metalines[v]
+            start_x = self.segments[v][0][0]
+            start_y = self.segments[v][0][1]
+            end_x = self.segments[v][-1][0]
+            end_y = self.segments[v][-1][1]
             if start_x == end_x:
                 angles.append(np.pi/2)
             else:
@@ -443,9 +451,17 @@ class MetaLine(object):
         # merge
         threshold_dist = 4
         _, _, _, _, cur_start_x, cur_start_y, cur_end_x, cur_end_y = self.metalines[line_idx] # input index
+        cur_start_x = self.segments[line_idx][0][0]
+        cur_start_y = self.segments[line_idx][0][1]
+        cur_end_x = self.segments[line_idx][-1][0]
+        cur_end_y = self.segments[line_idx][-1][1]
         k = np.abs(np.tan(current_angle))
         if k > 1:
             _, _, _, _, start_x, start_y, end_x, end_y = self.metalines[min_line_idx]
+            start_x = self.segments[min_line_idx][0][0]
+            start_y = self.segments[min_line_idx][0][1]
+            end_x = self.segments[min_line_idx][-1][0]
+            end_y = self.segments[min_line_idx][-1][1]
             dist_start = np.abs(start_y - cur_end_y)
             dist_end = np.abs(end_y - cur_end_y)
             if dist_start < dist_end and dist_start < threshold_dist:
@@ -461,6 +477,10 @@ class MetaLine(object):
             return -1
         else: # 0<=k <=1
             _, _, _, _, start_x, start_y, end_x, end_y = self.metalines[min_line_idx]
+            start_x = self.segments[min_line_idx][0][0]
+            start_y = self.segments[min_line_idx][0][1]
+            end_x = self.segments[min_line_idx][-1][0]
+            end_y = self.segments[min_line_idx][-1][1]
             dist_start = np.abs(start_x - cur_end_x)
             dist_end = np.abs(end_x - cur_end_x)
             if dist_start < dist_end and dist_start < threshold_dist:
@@ -476,18 +496,6 @@ class MetaLine(object):
             return -1
         
 
-            
-
-    def extend_verti_line(self, cur_line_idx, removal):
-        """
-        """
-        #TODO
-        pass
-
-            
-
-
-
     def extend_hori_line(self, cur_line_idx, removal):
         """
         cur_line_idx: one index of self.metalines and self.segments
@@ -495,6 +503,10 @@ class MetaLine(object):
         remove: sign for whether a sements and metalines should be ignored
         """
         id_num, _, k, b, start_x, _, end_x, end_y = self.metalines[cur_line_idx]
+        start_x = self.segments[cur_line_idx][0][0]
+        # start_y = self.segments[cur_line_idx][0][1]
+        end_x = self.segments[cur_line_idx][-1][0]
+        end_y = self.segments[cur_line_idx][-1][1]
         assert(cur_line_idx == id_num - 1)
         end_y = k * end_x + b
         cur_x = end_x
@@ -628,14 +640,17 @@ class MetaLine(object):
 
 
 
-
-                            
-
-
-
-
-
+    
+    def extend_verti_line(self, cur_line_idx, removal):
+        """
+        extend vertical line
+        """
         
+        
+        
+
+            
+
 
 
     def extend_lines(self, segments, lines, removal):
