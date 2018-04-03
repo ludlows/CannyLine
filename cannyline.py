@@ -128,6 +128,7 @@ class MetaLine(object):
         # construct mask
         grad_rows, grad_cols = np.where(self.canny_edge > 0)
         self.mask = (self.canny_edge > 0).astype(np.uint8)
+        self.mask = self.mask.astype(np.int32)
 
         self.grad_points = [(c,r)for r,c in zip(grad_rows, grad_cols)]
         self.grad_values = self.grad_map[grad_rows, grad_cols]
@@ -319,7 +320,11 @@ class MetaLine(object):
             # print("n={}".format(n))
             
             # print(dev)
+            # print("length of edge", len(edge))
+            # print("n  is ", n)
+            # print('end is ', n)
             updated_edge = [edge[i] for i in range(start, end+1)]
+
             return updated_edge, (0, k, b, dev)
         else:
             sumxy = np.sum(coord, axis=0)
@@ -384,6 +389,9 @@ class MetaLine(object):
                 newsegments.append(res_edge)
                 for x, y in res_edge:
                     self.mask[y,x] = -count
+                    # print("-count", -count)
+                    # print("mask")
+                    # print(self.mask[y,x])
                 id_num = count
                 direction, k, b, _ = para
                 # direction :0 for k<1, 1 for k >=1
@@ -502,18 +510,21 @@ class MetaLine(object):
         extend horizontal line
         remove: sign for whether a sements and metalines should be ignored
         """
-        id_num, _, k, b, start_x, _, end_x, end_y = self.metalines[cur_line_idx]
+        id_num, _, meta_k, meta_b, start_x, _, end_x, end_y = self.metalines[cur_line_idx]
         start_x = self.segments[cur_line_idx][0][0]
         # start_y = self.segments[cur_line_idx][0][1]
         end_x = self.segments[cur_line_idx][-1][0]
         end_y = self.segments[cur_line_idx][-1][1]
         assert(cur_line_idx == id_num - 1)
-        end_y = k * end_x + b
+        end_y = meta_k * end_x + meta_b
         cur_x = end_x
         cur_y = end_y
         x_initial = int(cur_x + 0.5)
         y_initial = int(cur_y + 0.5)
-        index = (end_x - start_x) / np.abs(end_x - start_x)
+        if end_x == start_x:
+            index = 0
+        else:
+            index = (end_x - start_x) / np.abs(end_x - start_x)
 
         # the change of former_points should be upadated into self.segments
         former_segment = [v for v in self.segments[cur_line_idx]]
@@ -523,17 +534,18 @@ class MetaLine(object):
         gap = 0
 
         while True:
+            # print("extend horizontal line ", id_num)
             x_initial += index
-            cur_y += index*k
+            cur_y += index*meta_k
             y_initial = int(cur_y + 0.5)
 
             choose_up = False
             if y_initial + 0.5 > cur_y:
                 choose_up = True
             if x_initial > 0 and x_initial < self.num_col -1 and y_initial > 0 and y_initial < self.num_row -1:
-                m0 = self.mask[y_initial, x_initial]
-                m1 = self.mask[y_initial-1, x_initial]
-                m2 = self.mask[y_initial+1, x_initial]
+                m0 = self.mask[int(y_initial), int(x_initial)]
+                m1 = self.mask[int(y_initial)-1, int(x_initial)]
+                m2 = self.mask[int(y_initial)+1, int(x_initial)]
                 hypo_line_id_nums = []
                 if m0 < 0 and m0 != -id_num:
                     hypo_line_id_nums.append(-m0-1)
@@ -549,19 +561,22 @@ class MetaLine(object):
                         new_segment, para = self.least_square_fit(self.segments[cur_line_idx], self.sigma)
                         if new_segment:
                             # update self.segments
+                            new_segment.sort()
                             self.segments[cur_line_idx] = new_segment
                             # # update meta lines
                             # temp_meta_value = list(self.metalines[cur_line_idx])
                             # temp_meta_value[-4:] = [new_segment[0][0], new_segment[0][1], new_segment[-1][0], new_segment[-1][1]]
                             # self.metalines[cur_line_idx] = tuple(temp_meta_value)
                             # # important above
-                            direction, k, b, _ = para
+                            direction, meta_k, meta_b, _ = para
                             if direction == 0:
                                 x_initial = new_segment[-1][0]
-                                cur_y = k*x_initial + b
+                                cur_y = meta_k*x_initial + meta_b
                                 removal[remove_index] = 1
                                 extend = True
                             elif direction == 1:
+                                k = meta_k
+                                b = meta_b
                                 new_y_start = new_segment[0][1]
                                 new_x_start = k * new_y_start + b
                                 new_y_end = new_segment[-1][1]
@@ -583,17 +598,17 @@ class MetaLine(object):
                 else:
                     if any([m0==1, m1==1, m2==1]) and m0+m1+m2 == 1:
                         if m0 == 1 and m0 >= m1 and m0 >= m2:
-                            self.segments[cur_line_idx].append((x_initial, y_initial))
-                            self.mask[y_initial, x_initial] = -id_num
+                            self.segments[cur_line_idx].append((int(x_initial), int(y_initial)))
+                            self.mask[int(y_initial), int(x_initial)] = -id_num
                         elif m1 == 1 and m1>= m0  and m1>=m2:
-                            self.segments[cur_line_idx].append((x_initial, y_initial - 1))
-                            self.mask[y_initial-1, x_initial] = -id_num
+                            self.segments[cur_line_idx].append((int(x_initial), int(y_initial) - 1))
+                            self.mask[int(y_initial-1), int(x_initial)] = -id_num
                         elif m2 == 1 and m2 >= m0  and m2 >= m1:
                             if choose_up:
                                 gap += 1
                                 continue
-                            self.segments[cur_line_idx].append((x_initial, y_initial+1))
-                            self.mask[y_initial+1, x_initial] = -id_num
+                            self.segments[cur_line_idx].append((int(x_initial), int(y_initial+1)))
+                            self.mask[int(y_initial)+1, int(x_initial)] = -id_num
                         edge += 1
                         edge_total += 1
                     else:
@@ -610,9 +625,9 @@ class MetaLine(object):
                         #     # update self.segments
                         #     self.segments[cur_line_idx] = new_segment
                         #     self.metalines[cur_line_idx][-4:] = 
-                        k = para[1]
-                        b = para[2]
-                        cur_y = x_initial * k + b
+                        meta_k = para[1]
+                        meta_b = para[2]
+                        cur_y = x_initial * meta_k + meta_b
                         edge_total = 0
                         gap = 0
                         extend = True
@@ -645,19 +660,22 @@ class MetaLine(object):
         """
         extend vertical line
         """
-        id_num, _, k, b, _, start_y, _, end_y = self.metalines[cur_line_idx]
+        id_num, _, meta_k, meta_b, _, start_y, _, end_y = self.metalines[cur_line_idx]
         assert(cur_line_idx == id_num -1)
         start_y = self.segments[cur_line_idx][0][1]
         end_y = self.segments[cur_line_idx][-1][1]
 
-        end_x = k * end_y + b
+        end_x = meta_k * end_y + meta_b
         cur_x = end_x
         cur_y = end_y
 
         x_initial = int(cur_x + 0.5)
         y_initial = int(cur_y + 0.5)
 
-        index = (end_y - start_y) / np.abs(end_y - start_y)
+        if end_y == start_y:
+            index = 0
+        else: 
+            index = (end_y - start_y) / np.abs(end_y - start_y)
 
         former_points = [v for v in self.segments[cur_line_idx]]
 
@@ -666,17 +684,36 @@ class MetaLine(object):
         edge_total = 0
 
         extend = False
+
+        pre_initial = (None, None)
+
         while True:
+            # print("extend vertical line ", id_num)
+            # print("k is ", meta_k)
             y_initial += index
-            cur_x += index * k
+            # print(index)
+            y_initial = int(y_initial)
+            cur_x += index * meta_k
             x_initial = int(cur_x + 0.5)
+            # print("x_initial", x_initial, "y_inital", y_initial)
+            # print("pre_initial", pre_initial)
+            # print("self.mask[y_initial, x_initial]", self.mask[y_initial, x_initial])
+            # if self.mask[y_initial, x_initial] == -id_num:
+            #     break
+            # TODO there is a infinite loop , how to fix it?
+            if pre_initial == (x_initial, y_initial):
+                break
+            # print("len()", len(self.segments[cur_line_idx]))
+            pre_initial = (x_initial, y_initial)
+
             choose_left = False
             if x_initial + 0.5 > cur_x:
                 choose_left = True
             if x_initial > 0 and x_initial < self.num_col - 1 and y_initial > 0 and y_initial < self.num_row -1:
-                m0 = self.mask[y_initial, x_initial]
-                m1 = self.mask[y_initial, x_initial - 1]
-                m2 = self.mask[y_initial, x_initial + 1]
+
+                m0 = self.mask[int(y_initial), int(x_initial)]
+                m1 = self.mask[int(y_initial), int(x_initial) - 1]
+                m2 = self.mask[int(y_initial), int(x_initial) + 1]
                 hype_line_ids = []
                 if m0 < 0  and m0 != -id_num:
                     hype_line_ids.append(-m0-1)
@@ -688,16 +725,21 @@ class MetaLine(object):
                     remove_index = self.merge_lines(id_num, id_num-1, hype_line_ids, self.thresh_angle)
                     if remove_index != -1:
                         new_segment, para = self.least_square_fit(self.segments[cur_line_idx], self.sigma)
+                        # TODO this step always add one (332,21) into list new_segment
+                        # print('new_segment', new_segment)
                         if new_segment:
+                            new_segment.sort()
                             self.segments[cur_line_idx] = new_segment
-                            direction, k, b, _ = para
+                            direction, meta_k, meta_b, _ = para
                             if direction == 1:
                                 y_initial = new_segment[-1][1]
-                                cur_x = k * y_initial + b
+                                cur_x = meta_k * y_initial + meta_b
                                 removal[remove_index] = 1
                                 extend = True
-                            elif direction == 0
+                            elif direction == 0: # this step
                                 # //0 for k<1, 1 for k >=1
+                                k = meta_k
+                                b = meta_b
                                 new_x_start = new_segment[0][0]
                                 new_y_start = k*new_x_start + b
                                 new_x_end = new_segment[-1][0]
@@ -708,23 +750,24 @@ class MetaLine(object):
                             for x,y in new_segment:
                                 self.mask[y,x] = -id_num
                         else:
+                            self.segments[cur_line_idx] = former_points
                             break
                     else:
                         break
                 else:
                     if any([m0==1, m1==1, m2==1]) and m0+m1+m2 == 1:
                         if m0==1 and m0>=m1 and m0>=m2:
-                            self.segments[cur_line_idx].append((x_initial, y_initial))
-                            self.mask[y_initial, x_initial] = -id_num
+                            self.segments[cur_line_idx].append((int(x_initial), int(y_initial)))
+                            self.mask[int(y_initial), int(x_initial)] = -id_num
                         elif m1 == 1 and m1>=m0 and m1>=m2:
-                            self.segments[cur_line_idx].append((x_initial-1, y_initial))
-                            self.mask[y_initial, x_initial-1] = -id_num
+                            self.segments[cur_line_idx].append((int(x_initial)-1, int(y_initial)))
+                            self.mask[int(y_initial), int(x_initial)-1] = -id_num
                         elif m2 == 1 and m2>=m0 and m2>=m1:
                             if choose_left:
                                 gap += 1
                                 continue
-                            self.segments[cur_line_idx].append((x_initial+1, y_initial))
-                            self.mask[y_initial, x_initial+1] = -id_num
+                            self.segments[cur_line_idx].append((int(x_initial)+1, int(y_initial)))
+                            self.mask[int(y_initial), int(x_initial)+1] = -id_num
                         edge += 1
                         edge_total += 1
                     else:
@@ -736,17 +779,18 @@ class MetaLine(object):
                         gap = 0
                     if edge_total >= self.meaningful_len:
                         _, para = self.least_square_fit(self.segments[cur_line_idx], self.sigma)
-                        _,k,b,_ = para
-                        cur_x = y_initial * k + b
+                        _,meta_k,meta_b,_ = para
+                        cur_x = y_initial * meta_k + meta_b
                         edge_total = 0
                         gap = 0
                         extend = True
                         # TODO former 
+                        former_points = self.segments[cur_line_idx]
             else:
                 break
         if extend:
-            _, para = self.least_square_fit(self.segments[cur_line_idx], sef.sigma)
-            direction, k, b, dev = para
+            _, para = self.least_square_fit(self.segments[cur_line_idx], self.sigma)
+            direction, k, b, _ = para
             if direction == 0:
                 new_x_start = self.segments[cur_line_idx][0][0]
                 new_y_start = k * new_x_start + b
@@ -760,7 +804,7 @@ class MetaLine(object):
                 new_x_end = k * new_y_end + b
                 self.metalines[cur_line_idx] = (id_num,direction,k,b, new_x_start,new_y_start, new_x_end, new_y_end)
         else:
-            self.segments[cur_line_idx] = former_segment
+            self.segments[cur_line_idx] = former_points
                             
 
 
@@ -835,15 +879,101 @@ class MetaLine(object):
                     self.extend_verti_line(idx, removal)
                     # reverse
                     self.segments[idx].reverse()
-                    if self.segments[idx][1] == 0:
+                    if self.metalines[idx][1] == 0:
                         self.extend_hori_line(idx, removal)
-                    elif self.segments[idx][1] == 1:
+                    elif self.metalines[idx][1] == 1:
                         self.extend_verti_line(idx, removal)
                     else:
                         raise ValueError("directoin is wrong")
                     
                 else:
                     raise ValueError("the direction sign can not be {}".format(direction))
+                # grdient weight least square fitting
+                _, para = self.grad_weight_LSF(self.segments[idx], 0.5)
+                direction, k, b, _ = para
+                if direction == 1:
+                    start_y = self.segments[idx][0][1]
+                    start_x = k * start_y + b
+                    end_y = self.segments[idx][-1][1]
+                    end_x = k * end_y + b
+                elif direction == 0:
+                    start_x = self.segments[idx][0][0]
+                    start_y = k * start_x + b 
+                    end_x = self.segments[idx][-1][0]
+                    end_y = k * end_x + b
+                self.metalines[idx] = (idx+1, direction, k, b, start_x, start_y, end_x, end_y)
+
+
+    def line_valid_check(self, removal):
+        """
+        line valid checking
+        """
+        for idx in range(len(self.segments)):
+            if removal[idx] or len(self.segments[idx]) < 2*self.meaningful_len:
+                removal[idx] = 1
+            else:
+                orient_prob = self.line_valid_check_grad_orient(idx)
+                grad_prob = self.line_valid_check_gradient(idx)
+                if orient_prob * self.n4 * grad_prob * self.n2 > 1:
+                    removal[idx] = 1
+        return
+
+
+    
+    def line_valid_check_gradient(self, meta_line_idx):
+        num_points = len(self.segments[meta_line_idx])
+        step = int(num_points / self.meaningful_len)
+        if step == 0:
+            step = 1
+        gradient = []
+        j = 0
+        while j < num_points:
+            x,y = self.segments[meta_line_idx][j]
+            gradient.append(self.grad_map[y,x])
+            j += step
+        gradient.sort(reverse=True)
+        index = int(gradient[-1] + 0.5)
+        prob = np.power(self.greater_than[index], num_points)
+        return prob
+    
+    def line_valid_check_grad_orient(self, meta_line_idx):
+        """
+        pass
+        metaLines.xs === self.metalines[4]
+        """
+        angle_offset = np.pi / 8
+        start_x, start_y, end_x, end_y = self.metalines[meta_line_idx][-4:]
+     
+        delta_x = start_x - end_x
+        delta_y = start_y - end_y
+        if delta_x == 0:
+            angle_line = np.pi / 2
+        else:
+            angle_line = np.arctan(delta_y / delta_x)
+       
+        count1 = 0
+        count2 = 0
+        count3 = 0
+        for x,y in self.segments[meta_line_idx]:
+            angle = self.orient_map[y,x]
+            if np.abs(angle - angle_line) < angle_offset:
+                count1 += 1
+            if np.pi - np.abs(angle - angle_line) < angle_offset:
+                count2 += 1
+            count3 += 1
+        count = max(count1,count2)
+        return self.probability(count3, count, self.p)
+
+    def probability(self, total_num, num, p):
+        """
+        """
+        v = np.power(p, total_num)
+        prob = v
+        for i in range(total_num - num):
+            v = v * (total_num - i) / (1+i) * (1-p) / p
+            prob += v
+        return prob
+
 
 
 
@@ -856,11 +986,12 @@ class MetaLine(object):
             gauss_sigma: sigma for gaussian smoothing
             gauss_half_size: kernel size
         Output:
-            lines: [[f1,f2],[],[],...,[]]
+            lines: [[start_x,start_y, end_x, end_y, id_num],[],[],...,[]]
                
         """
+       
         self.getInfo(origin_img, gauss_sigma, gauss_half_size, self.p)
-
+        print("meaningful length", self.meaningful_len)
         # smart routing
         min_deviation = 2.0
         min_size = self.meaningful_len / 2
@@ -882,9 +1013,22 @@ class MetaLine(object):
         # the order of metalines and segmenst will not change forever
         self.segments = segments
         self.metalines = metalines 
+        assert(len(segments) == len(metalines))
 
+        self.extend_lines(remove)
+        print("length of self.segments", len(self.segments))
+        print("length of meta lines", len(self.metalines))
+        print('sum of remove', np.sum(remove))
 
+        self.line_valid_check(remove)
 
+        result_lines = []
+        for sign, metaline in zip(remove, self.metalines):
+            if not sign:
+                id_num, _,_,_,start_x, start_y, end_x, end_y = metaline
+                result_lines.append((start_x, start_y, end_x, end_y, id_num))
+        print("length of result line = ", len(result_lines))
+        return result_lines
 
         # test
         # result_img = np.zeros((origin_img.shape),dtype=np.uint8)
