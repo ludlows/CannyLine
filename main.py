@@ -6,7 +6,7 @@ from cannypf import CannyPF, comp_edge_chain
 from cannyline import MetaLine
 
 def main():
-    img_path = r"./img/test03.jpg"
+    img_path = r"./img/test07.jpg"
     img = cv2.imread(img_path, 0)
     # print('image shape', img.shape)
     # # compute edge map
@@ -24,7 +24,7 @@ def main():
     #         result_img[row, col] = 255
     # cv2.imwrite("C:\\Users\\Administrator\\Downloads\\CannyPFpy.jpg", result_img)
     mtline = MetaLine()
-    lines = mtline.mtline_detect(img, 1,1)
+    lines = mtline.mtline_detect(img, 8,1)
 
     out = 255* np.ones(img.shape, dtype=np.uint8)
     for start_x, start_y, end_x, end_y, _ in lines:

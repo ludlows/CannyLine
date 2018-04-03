@@ -15,7 +15,7 @@ class MetaLine(object):
         """
         self.visual_meaning_grad = 70
         self.p = 0.125
-        self.sigma = 1.0
+        self.sigma = 4.0
         self.thresh_angle = 0.0
         
         # self.meaningful_len
@@ -1036,15 +1036,28 @@ class MetaLine(object):
                 if direction == 0:
                     points.sort()
                     start_x = points[0][0]
-                    start_y = k * start_x + b
                     end_x = points[-1][0]
-                    end_y = k * end_x + b 
+                    if np.isinf(k):
+                        start_y = points[0][1]
+                        end_y = points[-1][1]
+                    else:
+                        start_y = k * start_x + b
+                   
+                        end_y = k * end_x + b 
                 elif direction == 1:
                     points.sort(key=lambda s:s[1]) # y
                     start_y = points[0][1]
-                    start_x = k * start_y + b 
+                    print(" k is ", k)
+                    # print(" np.isnan(k)", np.isinf(k))
+                    if np.isinf(k):
+                        start_x = points[0][0]
+                    else:
+                        start_x = k * start_y + b 
                     end_y = points[-1][1]
-                    end_x = k * end_y + b 
+                    if np.isinf(k):
+                        end_x = points[-1][0]
+                    else:
+                        end_x = k * end_y + b 
                 result_lines.append((start_x, start_y, end_x, end_y, id_num))
 
 
