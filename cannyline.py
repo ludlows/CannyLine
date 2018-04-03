@@ -561,7 +561,7 @@ class MetaLine(object):
                         new_segment, para = self.least_square_fit(self.segments[cur_line_idx], self.sigma)
                         if new_segment:
                             # update self.segments
-                            new_segment.sort()
+                       
                             self.segments[cur_line_idx] = new_segment
                             # # update meta lines
                             # temp_meta_value = list(self.metalines[cur_line_idx])
@@ -728,7 +728,7 @@ class MetaLine(object):
                         # TODO this step always add one (332,21) into list new_segment
                         # print('new_segment', new_segment)
                         if new_segment:
-                            new_segment.sort()
+                            
                             self.segments[cur_line_idx] = new_segment
                             direction, meta_k, meta_b, _ = para
                             if direction == 1:
@@ -1023,10 +1023,32 @@ class MetaLine(object):
         self.line_valid_check(remove)
 
         result_lines = []
-        for sign, metaline in zip(remove, self.metalines):
-            if not sign:
-                id_num, _,_,_,start_x, start_y, end_x, end_y = metaline
+        for i in range(len(remove)):
+            if not remove[i]:
+                points = self.segments[i]
+                id_num, direction,_,_,start_x, start_y, end_x, end_y = self.metalines[i]
+                _, para = self.grad_weight_LSF(points, self.sigma)
+                direction, k, b, _ = para
+                if direction == 0:
+                    points.sort()
+                    start_x = points[0][0]
+                    start_y = k * start_x + b
+                    end_x = points[-1][0]
+                    end_y = k * end_x + b 
+                elif direction == 1:
+                    points.sort(key=lambda s:s[1]) # y
+                    start_y = points[0][1]
+                    start_x = k * start_y + b 
+                    end_y = points[-1][1]
+                    end_x = k * end_y + b 
                 result_lines.append((start_x, start_y, end_x, end_y, id_num))
+
+
+        # for sign, metaline in zip(remove, self.metalines):
+        #     if not sign:
+        #         id_num, direction,_,_,start_x, start_y, end_x, end_y = metaline
+
+        #         result_lines.append((start_x, start_y, end_x, end_y, id_num))
         print("length of result line = ", len(result_lines))
         return result_lines
 
