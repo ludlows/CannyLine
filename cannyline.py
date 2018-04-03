@@ -89,7 +89,7 @@ class MetaLine(object):
         self.orient_map_int = self.orient_map_int.astype(np.uint8)
         
         # construct histogram
-        histogram = np.zeros(shape=(8*gray_level_num), dtype=np.int32)
+        histogram = np.zeros(shape=(8*gray_level_num), dtype=np.int64)
         total_num = 0
         for r_idx in range(self.num_row):
             for c_idx in range(self.num_col):
@@ -100,7 +100,8 @@ class MetaLine(object):
                 else:
                     self.grad_map[r_idx,c_idx] = 0
         # gradient statistic
-        self.n2 = np.sum(histogram * (histogram - 1))
+        self.n2 = np.sum(histogram * np.abs(histogram - 1))
+        print(" self. n2", self.n2)
 
         p_max = 1.0 / np.exp(np.log(self.n2) / self.meaningful_len)
         p_min = 1.0 / np.exp(np.log(self.n2) / np.sqrt(self.num_col*self.num_row))
@@ -120,6 +121,9 @@ class MetaLine(object):
         if(self.threshold_grad_low < gauss_noise):
             self.threshold_grad_low = gauss_noise
         # convert probabilistic meaningful to visual meaningful
+        if not hasattr(self, 'threshold_grad_high'):
+            self.threshold_grad_high = 15 * self.threshold_grad_low
+
         self.threshold_grad_high = np.sqrt(self.threshold_grad_high * self.visual_meaning_grad)
 
         # compute canny edge
