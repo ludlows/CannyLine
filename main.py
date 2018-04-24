@@ -2,7 +2,7 @@
 import cv2
 import numpy as np
 
-from cannypf import CannyPF, comp_edge_chain
+from cannypf import CannyPF, comp_edge_chain, color_imwrite
 from cannyline import MetaLine
 
 def main():
@@ -36,5 +36,18 @@ def main():
     # mtline.getInfo(img,1,1,0.125)
     # cv2.imwrite(r"./img/cannypf.jpg", mtline.canny_edge)
 
+def main2():
+    img_path = r"./img/test07.jpg"
+    img = cv2.imread(img_path, 0)
+    cannypf = CannyPF(3, 70, img)
+    edgemap = cannypf.comp_edge_map()
+    edge_chain = comp_edge_chain(img, edgemap)
+    shape = list(img.shape) + [3]
+    name = img_path.split(".")[:-1]
+    name = ".".join(name)
+    name += "-color-out.jpg"
+    color_imwrite(edge_chain, shape, name)
+    
+
 if __name__  == "__main__":
-    main()
+    main2()

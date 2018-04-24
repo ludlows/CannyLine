@@ -103,8 +103,6 @@ class CannyPF(object):
         return cv2.Canny(self.smth_img, low, high, apertureSize=3)
 
 
-
-
 def comp_edge_chain(image, edge_map):
     """
     this function compute list of line, based on edge map
@@ -189,7 +187,7 @@ def comp_edge_chain(image, edge_map):
     maximal_length = int(np.sqrt(num_col**2+num_row**2))
     # mask is used to reduce infinity loop
     for i in range(len(gradient_points)):
-        print("i = {}".format(i))
+        # print("i = {}".format(i))
         x = gradient_points[i][0] # col
         y = gradient_points[i][1] # row
         chain = []
@@ -224,6 +222,16 @@ def comp_edge_chain(image, edge_map):
     print("end")
     return edge_chain
 
+
+def color_imwrite(edge_chain, shape, name='out.jpg'):
+    colors = [(int(np.random.random()*255),
+               int(np.random.random()*255),
+               int(np.random.random()*255)) for _ in range(29)]
+    img = 255 * np.ones(shape, dtype=np.uint8)
+    for idx, chain in enumerate(edge_chain):
+        for x, y in chain:
+            img[y, x, :] = colors[ idx % 29]
+    cv2.imwrite(name, img)
 
 
         
