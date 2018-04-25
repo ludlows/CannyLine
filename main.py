@@ -1,5 +1,6 @@
 
 import cv2
+import os
 import numpy as np
 
 from cannypf import CannyPF, comp_edge_chain, color_imwrite
@@ -47,7 +48,38 @@ def main2():
     name = ".".join(name)
     name += "-color-out.jpg"
     color_imwrite(edge_chain, shape, name)
+
+def statistic(dir_name, prefix):
+    filenames = os.listdir(dir_name)
+    mtline = MetaLine()
+    line_length = []
+    line_num = []
+    for filename in filenames:
+        print(filename)
+        img = cv2.imread(os.path.join(dir_name, filename), 0)
+        out = 255* np.ones(img.shape, dtype=np.uint8)
+        lines = mtline.mtline_detect(img, 2, 1)
+        length = 0
+        for start_x, start_y, end_x, end_y, _ in lines:
+            cv2.line(out, (int(start_x), int(start_y)), (int(end_x), int(end_y)), (0,0,0),thickness=1, lineType=cv2.LINE_AA)
+            length += np.sqrt((start_x - end_x)**2 + (start_y-end_y)**2)
+        line_num.append(len(lines))
+        line_length.append(length)
+        
+        print("total length is = ", length)
+        print("num is = ", len(lines))
+        print('avg length', length / len(lines))
+        name = filename.split(".")[:-1]
+        name = ".".join(name)
+        name += "-out.jpg"
+        name = prefix + name
+        name =  os.path.join('./out/', name)
+        print(name)
+        cv2.imwrite(name, out)
+        
     
 
+
+
 if __name__  == "__main__":
-    main2()
+    statistic("./img/Outdoor", 'outdoor')

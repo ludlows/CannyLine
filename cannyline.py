@@ -218,11 +218,13 @@ class MetaLine(object):
                     if not newres:
                         break
             if len(chain) > self.meaningful_len:
+                chain.sort()
                 edge_chain.append(chain)
        
         # find segments. segments = [ [(col1,row1), (col2,row2), ..], [(col1,row1),..],..] 
         # find segment for each edge in edge_map
         print("length of strings = {}".format(len(edge_chain)))
+
         segments = []
         for i in range(len(edge_chain)):
             self.sub_division(segments, edge_chain[i],0, len(edge_chain[i])-1, min_deviation, min_size)
@@ -1047,7 +1049,7 @@ class MetaLine(object):
                 elif direction == 1:
                     points.sort(key=lambda s:s[1]) # y
                     start_y = points[0][1]
-                    print(" k is ", k)
+                    # print(" k is ", k)
                     # print(" np.isnan(k)", np.isinf(k))
                     if np.isinf(k):
                         start_x = points[0][0]
