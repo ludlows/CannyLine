@@ -218,7 +218,7 @@ class MetaLine(object):
                     if not newres:
                         break
             if len(chain) > self.meaningful_len:
-                chain.sort()
+                # chain.sort()
                 edge_chain.append(chain)
        
         # find segments. segments = [ [(col1,row1), (col2,row2), ..], [(col1,row1),..],..] 
