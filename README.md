@@ -2,7 +2,7 @@
 
 A Line Segment Extraction Toolbox
 
-Authour: github.com/ludlows
+Authour: https://github.com/ludlows
 
 | original image  | line extraction | colorized | line segments |
 | :-------------: | :-------------: | :-------------: | :-------------: |
