@@ -3,11 +3,11 @@ import cv2
 import os
 import numpy as np
 
-from cannypf import CannyPF, comp_edge_chain, color_imwrite
+from cannyline import CannyPF, comp_edge_chain, color_imwrite
 from cannyline import MetaLine
 
-def main():
-    img_path = r"./img/test07.jpg"
+def expample1():
+    img_path = "../img/test01.jpg"
     img = cv2.imread(img_path, 0)
     # print('image shape', img.shape)
     # # compute edge map
@@ -32,13 +32,12 @@ def main():
         cv2.line(out, (int(start_x), int(start_y)), (int(end_x), int(end_y)), (0,0,0),thickness=1, lineType=cv2.LINE_AA)
     name = img_path.split(".")[:-1]
     name = ".".join(name)
-    name += "-out.jpg"
-    cv2.imwrite(name, out)
-    # mtline.getInfo(img,1,1,0.125)
-    # cv2.imwrite(r"./img/cannypf.jpg", mtline.canny_edge)
+    cv2.imwrite(name + "-out1.jpg", out)
+    mtline.getInfo(img,1,1,0.125)
+    cv2.imwrite(name + "cannypf.jpg", mtline.canny_edge)
 
-def main2():
-    img_path = r"./img/test07.jpg"
+def expample2():
+    img_path = "../img/test01.jpg"
     img = cv2.imread(img_path, 0)
     cannypf = CannyPF(3, 70, img)
     edgemap = cannypf.comp_edge_map()
@@ -49,7 +48,7 @@ def main2():
     name += "-color-out.jpg"
     color_imwrite(edge_chain, shape, name)
 
-def statistic(dir_name, prefix):
+def processFolder(dir_name, prefix):
     filenames = os.listdir(dir_name)
     mtline = MetaLine()
     line_length = []
@@ -77,8 +76,8 @@ def statistic(dir_name, prefix):
         print(name)
         cv2.imwrite(name, out)
 
-def demo():
-    img_path = r"./img/demo.jpg"
+def expample3():
+    img_path = "../img/test01.jpg"
     img = cv2.imread(img_path, 0)
     mtline = MetaLine()
     lines = mtline.mtline_detect(img, 8,1)
@@ -86,16 +85,16 @@ def demo():
     out = 255* np.ones(img.shape, dtype=np.uint8)
     for start_x, start_y, end_x, end_y, _ in lines:
         cv2.line(out, (int(start_x), int(start_y)), (int(end_x), int(end_y)), (0,0,0),thickness=1, lineType=cv2.LINE_AA)
-    name = img_path.split('/')[-1]
-    name = name.split(".")[-2]
-    name += "-out.jpg"
+    
+    name = "".join(img_path.split(".")[:-1])
+    name += "-out3.jpg"
     print(name)
-    name =  os.path.join('./out/', name)
-    print(name)
-    print(cv2.imwrite(name, out))
+    cv2.imwrite(name, out)
     
 
 
 
 if __name__  == "__main__":
-    demo()
+    expample1()
+    expample2()
+    expample3()

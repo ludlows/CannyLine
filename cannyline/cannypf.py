@@ -1,3 +1,8 @@
+"""
+this repository implements canny line
+author: github.com/ludlows
+2018-04-10
+"""
 
 import cv2
 import numpy as np
@@ -105,6 +110,8 @@ class CannyPF(object):
 
 def comp_edge_chain(image, edge_map):
     """
+    author: github.com/ludlows
+    2018-04-10
     this function compute list of line, based on edge map
     ------
     Input: image, image, numpy array.
@@ -150,7 +157,7 @@ def comp_edge_chain(image, edge_map):
 
     def has_next(x_seed, y_seed):
         """
-        this function return boolean result.
+        this function returns boolean result.
         Check whether there is a next value
         Input: x_seed, int, col
                y_seed, int, row
@@ -223,7 +230,12 @@ def comp_edge_chain(image, edge_map):
     return edge_chain
 
 
-def color_imwrite(edge_chain, shape, name='out.jpg'):
+def color_imwrite(edge_chain, shape, name='out.jpg', write=True):
+    """
+    author: github.com/ludlows
+    2018-04-10
+    this function colorizes the line segments obtained by CanyLine toolbox
+    """
     colors = [(int(np.random.random()*255),
                int(np.random.random()*255),
                int(np.random.random()*255)) for _ in range(29)]
@@ -231,7 +243,9 @@ def color_imwrite(edge_chain, shape, name='out.jpg'):
     for idx, chain in enumerate(edge_chain):
         for x, y in chain:
             img[y, x, :] = colors[ idx % 29]
-    cv2.imwrite(name, img)
+    if write:
+        cv2.imwrite(name, img)
+    return img
 
 
         

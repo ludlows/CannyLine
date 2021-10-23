@@ -1,5 +1,7 @@
 """
-implement canny line
+this repository implements canny line
+author: github.com/ludlows
+2018-04-10
 """
 
 import cv2
