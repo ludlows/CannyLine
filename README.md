@@ -35,13 +35,13 @@ color_imwrite(edge_chain, shape, name)
 ```
 
 ### Extracting Lines
-from cannyline import MetaLine
+
 ```python
+from cannyline import MetaLine
 img_path = "./img/test02.jpg"
 img = cv2.imread(img_path, 0)
 mtline = MetaLine()
 lines = mtline.mtline_detect(img, 8,1)
-
 out = 255* np.ones(img.shape, dtype=np.uint8)
 for start_x, start_y, end_x, end_y, _ in lines:
     cv2.line(out, (int(start_x), int(start_y)), (int(end_x), int(end_y)), (0,0,0),thickness=1, lineType=cv2.LINE_AA)
