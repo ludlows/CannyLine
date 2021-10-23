@@ -35,7 +35,7 @@ color_imwrite(edge_chain, shape, name)
 ```
 
 ### Extracting Lines
-
+from cannyline import MetaLine
 ```python
 img_path = "./img/test02.jpg"
 img = cv2.imread(img_path, 0)
